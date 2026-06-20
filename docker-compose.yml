@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # 🔌 Nginx Gateway (The Front Door)
+  nginx:
+    image: nginx:alpine
+    container_name: production_proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+    networks:
+      - app_network
+
+  # 🚀 Go Backend API (Our Application)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: production_backend
+    environment:
+      - PORT=8080
+      - DB_HOST=postgres_db
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+    depends_on:
+      - db
+    networks:
+      - app_network
+
+  # 🗄️ PostgreSQL Database (The Storage Layer)
+  db:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=supersecretpassword
+      - POSTGRES_DB=app_data
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+volumes:
+  pgdata:
+
+networks:
+  app_network:
+    driver: bridge
