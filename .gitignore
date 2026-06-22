@@ -1,0 +1,19 @@
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfplan
+crash.log
+crash.*.log
+
+# Ansible
+*.retry
+
+# Secrets / env
+*.pem
+*.key
+.env
+.env.*
+
+# OS junk
+.DS_Store
