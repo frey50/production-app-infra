@@ -1,24 +1,28 @@
-name: Deploy to EC2
+name: Deploy to EC2 via SSM
 
 on:
   push:
     branches: [main]
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /home/ubuntu/app
-            git pull origin main
-            docker compose down
-            docker compose up -d --build
+          role-to-assume: arn:aws:iam::218549829591:role/github-actions-deploy-role
+          aws-region: eu-central-1
+
+      - name: Deploy via SSM
+        run: |
+          aws ssm send-command \
+            --instance-ids "i-0dc16145b15abf803" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["cd /home/ubuntu/app","git pull origin main","docker compose down","docker compose up -d --build"]' \
+            --query "Command.CommandId" \
+            --output text
