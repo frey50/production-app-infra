@@ -1,7 +1,5 @@
 version: '3.8'
-
 services:
-  # 🔌 Nginx Gateway (The Front Door)
   nginx:
     image: nginx:alpine
     container_name: production_proxy
@@ -14,7 +12,6 @@ services:
     networks:
       - app_network
 
-  # 🚀 Go Backend API (Our Application)
   app:
     build:
       context: .
@@ -33,7 +30,6 @@ services:
     networks:
       - app_network
 
-  # 🗄️ PostgreSQL Database (The Storage Layer)
   db:
     image: postgres:16-alpine
     container_name: postgres_db
@@ -46,8 +42,35 @@ services:
     networks:
       - app_network
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: production_prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - app_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: production_grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=changeme123
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - app_network
+
 volumes:
   pgdata:
+  prometheus_data:
+  grafana_data:
 
 networks:
   app_network:

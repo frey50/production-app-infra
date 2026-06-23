@@ -100,12 +100,18 @@
         group: ubuntu
         mode: "0755"
 
-    - name: Copy app files (Dockerfile, compose, source, nginx config)
-      copy:
-        src: "../../production-app-infra/"
-        dest: "{{ app_remote_dir }}/"
-        owner: ubuntu
-        group: ubuntu
+    - name: Remove existing app directory if present
+      file:
+        path: "{{ app_remote_dir }}"
+        state: absent
+
+    - name: Clone app repo
+      git:
+        repo: "https://github.com/frey50/production-app-infra.git"
+        dest: "{{ app_remote_dir }}"
+        version: main
+      become: true
+      become_user: ubuntu
 
     - name: Boot the containers
       community.docker.docker_compose_v2:

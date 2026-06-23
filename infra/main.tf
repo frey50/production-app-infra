@@ -20,13 +20,12 @@ resource "aws_key_pair" "deployer" {
 
 # 💻 2. The Compute Server Instance Resource
 resource "aws_instance" "web" {
-  ami           = "ami-01e444924a2233b07" # Ubuntu Server 24.04 LTS
-  instance_type = "t3.micro"
-
-  # Links the instance to our new ed25519 lock above:
-  key_name      = aws_key_pair.deployer.key_name
-
-  # ... leave your current VPC/subnet/security group lines exactly as they are here ...
+  ami                     = "ami-01e444924a2233b07"
+  instance_type           = "t3.micro"
+  subnet_id               = aws_subnet.public_subnet.id
+  vpc_security_group_ids  = [aws_security_group.app_sg.id]
+  key_name                = aws_key_pair.deployer.key_name
+  iam_instance_profile    = aws_iam_instance_profile.ssm_profile.name
 }
 
 # 🌐 1. The Main VPC (Our isolated cloud data center)
@@ -162,3 +161,83 @@ resource "aws_s3_bucket" "app_storage" {
     Environment = "Production"
   }
 }
+
+# ---------------------------------------------------------------------------
+# SSM access for EC2 (lets AWS manage the instance without inbound SSH)
+# ---------------------------------------------------------------------------
+
+resource "aws_iam_role" "ssm_role" {
+  name = "production-ec2-ssm-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_core" {
+  role       = aws_iam_role.ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "ssm_profile" {
+  name = "production-ec2-ssm-profile"
+  role = aws_iam_role.ssm_role.name
+}
+
+# ---------------------------------------------------------------------------
+# GitHub Actions OIDC -> AWS (no stored AWS keys needed)
+# ---------------------------------------------------------------------------
+
+resource "aws_iam_openid_connect_provider" "github" {
+  url             = "https://token.actions.githubusercontent.com"
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+}
+
+resource "aws_iam_role" "github_actions_deploy" {
+  name = "github-actions-deploy-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = aws_iam_openid_connect_provider.github.arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+        }
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:frey50/production-app-infra:ref:refs/heads/main"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "github_ssm_deploy" {
+  name = "github-ssm-send-command"
+  role = aws_iam_role.github_actions_deploy.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "ssm:SendCommand",
+        "ssm:GetCommandInvocation",
+        "ssm:ListCommandInvocations"
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
+
