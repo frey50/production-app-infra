@@ -8,11 +8,10 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
-# Production-Style Cloud Deployment Pipeline
+# Deployment Pipeline
 
-[![CI/CD Pipeline](https://github.com/frey50/production-app-infra/actions/workflows/main.yml/badge.svg)](https://github.com/frey50/production-app-infra/actions)
+[![CI/CD Pipeline](https://github.com/frey50/production-app-infra/actions/workflows/deploy.yml/badge.svg)](https://github.com/frey50/production-app-infra/actions)
 ![GitHub repo size](https://img.shields.io/github/repo-size/frey50/production-app-infra?color=38bdf8&style=flat-square)
-
 ---
 
 A small Go API, deployed to AWS with Terraform, configured with Ansible, containerized with Docker, and shipped continuously via a GitHub Actions pipeline that deploys through AWS Systems Manager — with no SSH port ever exposed to the internet.
