@@ -9,14 +9,14 @@ This repo is both a working deployment and a documented case study in infrastruc
 ## Architecture
 
 ```
-                         ┌─────────────────────────────┐
+                         ┌─────────────────────────────-┐
                          │         GitHub Actions       │
                          │  (push to main triggers run) │
-                         └───────────────┬───────────────┘
+                         └───────────────┬──────────────┘
                                          │ OIDC (short-lived token,
                                          │ no stored AWS keys)
                                          ▼
-                         ┌─────────────────────────────┐
+                         ┌────────────────────────────--─┐
                          │   AWS IAM Role (assumed via   │
                          │   GitHub OIDC provider)       │
                          └───────────────┬───────────────┘
